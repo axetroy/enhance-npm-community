@@ -59,7 +59,7 @@ async function detailPageHandler(): Promise {
   const github: HTMLAnchorElement = window.document.querySelector('.box a[href*=github]');
   if (!github) return;
   github.title = github.href;
-  const repo: Object = await JSONIfyHttpResponse(http.get(`https://api.github.com/repos${github.pathname}`));
+  const repo: Object = await getGithubRepoInfo(github.pathname);
 
   const li = document.createElement('li');
   const span: HTMLSpanElement = document.createElement('span');
@@ -198,6 +198,6 @@ function numFormat(num: number): string {
  * @param githubRepoPath  example: /axetroy/git-clone/cli
  * @returns {*}
  */
-function getGithubRepoInfo(githubRepoPath) {
-  return JSONIfyHttpResponse(http.get(`https://api.github.com/repos/${githubRepoPath}?client_id=${github.clientID}&client_secret=${github.clinetSecret}`));
+function getGithubRepoInfo(githubRepoPath: string): Promise {
+  return JSONIfyHttpResponse(http.get(`https://api.github.com/repos/${githubRepoPath.trim().replace(/^\/+/g, '')}?client_id=${github.clientId}&client_secret=${github.clinetSecret}`));
 }
