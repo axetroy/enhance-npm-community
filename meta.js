@@ -13,7 +13,7 @@ const meta = `// ==UserScript==
 // @compatible        chrome  完美运行
 // @compatible        firefox  完美运行
 // @supportURL        http://www.burningall.com
-// @run-at            document-idle
+// @run-at            document-end
 // @contributionURL   troy450409405@gmail.com|alipay.com
 // @downloadURL       https://github.com/axetroy/anti-redirect/raw/master/dist/anti-redirect.min.user.js
 // @namespace         https://greasyfork.org/zh-CN/users/3400-axetroy
