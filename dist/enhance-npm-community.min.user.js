@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name              enhance-npm-community
 // @author            Axetroy
-// @description       enhance-npm-community
+// @description       一个用于增强npm官网的GM脚本
 // @version           0.2.0
 // @grant             GM_xmlhttpRequest
 // @include           *www.npmjs.com*
@@ -11,10 +11,12 @@
 // @supportURL        http://www.burningall.com
 // @run-at            document-end
 // @contributionURL   troy450409405@gmail.com|alipay.com
-// @downloadURL       https://github.com/axetroy/anti-redirect/raw/master/dist/anti-redirect.min.user.js
+// @downloadURL       https://github.com/axetroy/enhance-npm-community/raw/master/dist/enhance-npm-community.min.user.js
 // @namespace         https://greasyfork.org/zh-CN/users/3400-axetroy
 // @license           The MIT License (MIT); http://opensource.org/licenses/MIT
 // ==/UserScript==
+
+// Github源码: https://github.com/axetroy/enhance-npm-community
 
 /**
 The MIT License (MIT)
