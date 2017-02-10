@@ -30,6 +30,7 @@ module.exports = {
           plugins: [
             "transform-flow-strip-types",
             "transform-inline-environment-variables",
+            "transform-safely",
             "transform-runtime",
             ["transform-strict-mode", {
               "strict": true
