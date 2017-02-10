@@ -1,6 +1,6 @@
 {
   "name": "enhance-npm-community",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "enhance-npm-community",
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack --config webpack.dev.config.js --display-error-details --progress --colors --watch",
