@@ -30,7 +30,8 @@ export default function () {
 
   return async function detailPageHandler(): Promise {
 
-    parseCodeBlock();   // parse require('xxx') | import xxx from
+    parseJSCodeBlock();   // parse require('xxx') | import xxx from
+    parseShellCodeBlock();   // parse require('xxx') | import xxx from
 
     const githubLink: HTMLAnchorElement = window.document.querySelector('.box a[href*=github]');
     if (!githubLink) return;
@@ -64,37 +65,101 @@ function getElementText(ele) {
   return ele.innerText || ele.textContent;
 }
 
-function parseCodeBlock() {
-  let lines = document.querySelectorAll('.highlight.js pre .line .source');
+function parseJSCodeBlock() {
+  const js = document.querySelectorAll('.highlight.js pre .line .source');
+  const javascript = document.querySelectorAll('.highlight.javascript pre .line .source');
+  const lines = [].slice.call(js).concat(...javascript);
 
-  lines.forEach(function (line) {
-    if (line.innerHTML.match(/require|from|import/g)) {
-      // console.log(line.innerText);
-      let stringQuotedEle = line.querySelector('.string.quoted') || line.querySelector('.import .string.quoted');
+  try {
+    lines.forEach(function (line) {
+      if (line.innerHTML.match(/require|from|import/g)) {
 
-      if (!stringQuotedEle) return;
+        (line.querySelectorAll('.string.quoted') || line.querySelectorAll('.import .string.quoted')).forEach(function (stringQuotedEle) {
+          if (!stringQuotedEle) return;
 
-      const requireName = getElementText(stringQuotedEle).trim().replace(/^['"]|['"]$/g, '');
+          const requireName = getElementText(stringQuotedEle).trim().replace(/^['"]|['"]$/g, '');
 
-      if (/^\./.test(requireName)) return;    // 不支持相对路径
+          if (/^\./.test(requireName)) return;    // 不支持相对路径
 
-      const packageNameMatch = requireName.match(/(^\@[^\/]+\/[^\/]+)|([^\/]+)/) || [];
-      const packageName = packageNameMatch[0];
+          const packageNameMatch = requireName.match(/(^\@[^\/]+\/[^\/]+)|([^\/]+)/) || [];
+          const packageName = packageNameMatch[0];
 
-      if (env.dev) {
-        console.log(requireName + ' >>> ' + packageName);
+          if (env.dev) {
+            console.info('[Parse Javascript]: ' + requireName + ' >>> ' + packageName);
+          }
+
+          // 正确解析才渲染页面
+          if (packageName) {
+            const childNodes = stringQuotedEle.children;
+            const stringQuotedStartEle = childNodes[0];
+            const stringQuotedEndEle = childNodes[childNodes.length - 1];
+            const packageUrl = `https://www.npmjs.com/package/${packageName}`;
+            stringQuotedEle.innerHTML = stringQuotedStartEle.innerHTML + `<a title="${packageUrl}" style="text-decoration: underline" href="${packageUrl}">${requireName}</a>` + stringQuotedEndEle.innerHTML;
+          }
+        });
+
       }
+    });
+  } catch (err) {
+    console.error(err);
+  }
 
-      // 正确解析才渲染页面
-      if (packageName) {
-        const childNodes = stringQuotedEle.children;
-        const stringQuotedStartEle = childNodes[0];
-        const stringQuotedEndEle = childNodes[childNodes.length - 1];
-        const packageUrl = `https://www.npmjs.com/package/${packageName}`;
-        stringQuotedEle.innerHTML = stringQuotedStartEle.innerHTML + `<a title="${packageUrl}" style="text-decoration: underline" href="${packageUrl}">${requireName}</a>` + stringQuotedEndEle.innerHTML;
+}
+
+function getElementText(ele) {
+  return ele.innerText || ele.textContent;
+}
+
+function parseShellCodeBlock() {
+  const sh = document.querySelectorAll('.highlight.sh pre .line .source');
+  const bash = document.querySelectorAll('.highlight.bash pre .line');
+  const noTag = document.querySelectorAll('pre:not(.highlight) code');
+  const lines = [].slice.call(sh).concat(...bash).concat(...noTag);
+
+  try {
+    lines.forEach(function (line) {
+      const match = getElementText(line).trim().replace(/^\$\s*/, '').match(/(npm)\s+(install)\s+((--?[\w]+\s)?|\s+)+([\w\-\@\.\_\/]+)/g);
+      if (match && match.length) {
+
+        const matchStr = match[0].trim();
+
+        const commands = matchStr.split(/\s+/g).map(v => v.trim());
+        let command = '', action = '', target = '';
+        const argv = [];
+
+        commands.forEach(function (str, index) {
+          if (index === 0) return command = str;
+          if (index === 1) return action = str;
+
+          // argv
+          if (/^\-/.test(str)) {
+            argv.push(str);
+          } else {
+            target = str;
+          }
+        });
+
+        let packageName = (target || '').trim();
+
+        // 处理一些带有版本的命令
+        // example: npm install @reactivex/rxjs@5.0.0
+        // example: npm install -g express-generator@4
+        packageName = packageName.replace(/([^\s])\@[\.\w\-]+$/, '$1');
+
+        if (env.dev) {
+          console.log('[Parse Shell]: ' + matchStr + ' >>> ' + packageName);
+        }
+
+        if (packageName) {
+          const packageUrl = `https://www.npmjs.com/package/${packageName}`;
+          line.innerHTML = line.innerHTML
+            .replace(/\&nbsp\;/g, ' ')    // remove empty string
+            .replace(target, `<a style="text-decoration: underline" title="${packageUrl}" href="${packageUrl}">${target}</a>`);
+        }
       }
-
-    }
-  });
+    });
+  } catch (err) {
+    console.error(err);
+  }
 
 }
