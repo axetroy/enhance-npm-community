@@ -7,7 +7,7 @@
 - 获取npm包对应的github信息，是骡子是马，一看便知
 - 优化部分显示效果
 - 提示哪些包已经很久没有更新，要引入需谨慎
-- 可以直接点击require('xxx')，跳转到相应的npm包(TODO)
+- 可以直接点击``require('xxx')``, ``npm install xxx``，跳转到相应的npm包
 
 # Usage
 
