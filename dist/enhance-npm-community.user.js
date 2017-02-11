@@ -7281,15 +7281,13 @@ exports.default = function () {
 
               // warning
 
-              if (commitFromNowDiffDays > 60) {
-                span = generateOutdatedWarning(lastCommitter.date, commitFromNowDiffDays);
+              span = generateOutdatedWarning(lastCommitter.date, commitFromNowDiffDays);
 
-                document.querySelector('.package-name').appendChild(span);
-              }
+              document.querySelector('.package-name').appendChild(span);
 
               window.document.querySelector('.box').insertBefore(container, githubLink.parentNode);
 
-            case 18:
+            case 19:
             case 'end':
               return _context.stop();
           }
@@ -7337,7 +7335,7 @@ function generateOutdatedWarning(date, diffDays) {
   } else if (diffDays > 180) {
     tag = tags.outdated;
   }
-  span.innerHTML = (tag ? '<strong style="color: ' + tag.color + '">@' + tag.name + '</strong> ' : '') + ('The package last commit at <strong style="color: #283546;">' + new _timeago2.default().format(date) + '</strong>');
+  span.innerHTML = (tag ? '<strong style="color: ' + tag.color + '">@' + tag.name + '</strong> ' : '') + ('last commit at <strong style="color: #283546;">' + new _timeago2.default().format(date) + '</strong>');
   span.style.color = 'rgba(0, 0, 0, 0.6)';
   span.style.fontSize = '16px';
   span.style.verticalAlign = 'middle';
@@ -7388,10 +7386,6 @@ function parseJSCodeBlock() {
   } catch (err) {
     console.error(err);
   }
-}
-
-function getElementText(ele) {
-  return ele.innerText || ele.textContent;
 }
 
 function parseShellCodeBlock() {
