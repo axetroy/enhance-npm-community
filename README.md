@@ -1,5 +1,7 @@
 # enhance-npm-community
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/axetroy/enhance-npm-community.svg)](https://greenkeeper.io/)
+
 一个用于增强npm官网的GM脚本
 
 # feature
