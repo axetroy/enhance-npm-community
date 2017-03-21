@@ -6,6 +6,8 @@ import searchPageHandler from './pages/search';
 import browsePageHandler from './pages/browse';
 import homePageHandler from './pages/home';
 
+require('./index.css');
+
 init();
 
 async function init() {

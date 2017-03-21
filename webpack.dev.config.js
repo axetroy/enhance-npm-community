@@ -17,6 +17,22 @@ module.exports = {
   module: {
     loaders: [
       {
+        test: /\.css$/,
+        use: [
+          {loader: "style-loader"},
+          {loader: "css-loader"},
+        ],
+      },
+      {
+        test: /\.useable\.css$/,
+        use: [
+          {
+            loader: "style-loader/useable"
+          },
+          {loader: "css-loader"},
+        ],
+      },
+      {
         test: /\.(jsx|js)?$/,
         exclude: /(node_modules|bower_components)/,
         loader: 'babel-loader',
