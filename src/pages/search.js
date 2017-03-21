@@ -17,7 +17,7 @@ async function searchPageHandler(): Promise {
   document.querySelectorAll('.github-info').forEach((ele) => ele.remove());
   const searchResults = document.querySelectorAll('.package-details');
   searchResults.forEach(async(detailEle: any) => {
-    const nameEle: HTMLAnchorElement = detailEle.querySelector('.name');
+    const nameEle: HTMLAnchorElement = detailEle.querySelector('.packageName');
     const name: string = nameEle.innerText || nameEle.textContent;
     const npmPackage = await npm.fetchPackageInfo(name);
     let repoInfo = gitParser(npmPackage.repository.url);
