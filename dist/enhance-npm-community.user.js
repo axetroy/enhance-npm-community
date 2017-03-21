@@ -2,7 +2,7 @@
 // @name              enhance-npm-community
 // @author            Axetroy
 // @description       一个用于增强npm官网的GM脚本
-// @version           0.2.0
+// @version           0.2.1
 // @grant             GM_xmlhttpRequest
 // @include           *www.npmjs.com*
 // @connect           *
@@ -45,41 +45,41 @@ SOFTWARE.
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
-
+/******/
 /******/ 	// The require function
 /******/ 	function __webpack_require__(moduleId) {
-
+/******/
 /******/ 		// Check if module is in cache
 /******/ 		if(installedModules[moduleId])
 /******/ 			return installedModules[moduleId].exports;
-
+/******/
 /******/ 		// Create a new module (and put it into the cache)
 /******/ 		var module = installedModules[moduleId] = {
 /******/ 			i: moduleId,
 /******/ 			l: false,
 /******/ 			exports: {}
 /******/ 		};
-
+/******/
 /******/ 		// Execute the module function
 /******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-
+/******/
 /******/ 		// Flag the module as loaded
 /******/ 		module.l = true;
-
+/******/
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
 /******/ 	}
-
-
+/******/
+/******/
 /******/ 	// expose the modules object (__webpack_modules__)
 /******/ 	__webpack_require__.m = modules;
-
+/******/
 /******/ 	// expose the module cache
 /******/ 	__webpack_require__.c = installedModules;
-
+/******/
 /******/ 	// identity function for calling harmony imports with the correct context
 /******/ 	__webpack_require__.i = function(value) { return value; };
-
+/******/
 /******/ 	// define getter function for harmony exports
 /******/ 	__webpack_require__.d = function(exports, name, getter) {
 /******/ 		if(!__webpack_require__.o(exports, name)) {
@@ -90,7 +90,7 @@ SOFTWARE.
 /******/ 			});
 /******/ 		}
 /******/ 	};
-
+/******/
 /******/ 	// getDefaultExport function for compatibility with non-harmony modules
 /******/ 	__webpack_require__.n = function(module) {
 /******/ 		var getter = module && module.__esModule ?
@@ -99,13 +99,13 @@ SOFTWARE.
 /******/ 		__webpack_require__.d(getter, 'a', getter);
 /******/ 		return getter;
 /******/ 	};
-
+/******/
 /******/ 	// Object.prototype.hasOwnProperty.call
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
-
+/******/
 /******/ 	// __webpack_public_path__
 /******/ 	__webpack_require__.p = "";
-
+/******/
 /******/ 	// Load entry module and return exports
 /******/ 	return __webpack_require__(__webpack_require__.s = 108);
 /******/ })
@@ -149,7 +149,7 @@ if(typeof __e == 'number')__e = core; // eslint-disable-line no-undef
 /* WEBPACK VAR INJECTION */(function(process, global, setImmediate) {/* @preserve
  * The MIT License (MIT)
  * 
- * Copyright (c) 2013-2015 Petka Antonov
+ * Copyright (c) 2013-2017 Petka Antonov
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -171,7 +171,7 @@ if(typeof __e == 'number')__e = core; // eslint-disable-line no-undef
  * 
  */
 /**
- * bluebird build version 3.4.7
+ * bluebird build version 3.5.0
  * Features enabled: core, race, call_get, generators, map, nodeify, promisify, props, reduce, settle, some, using, timers, filter, any, each
 */
 !function(e){if(true)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Promise=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof _dereq_=="function"&&_dereq_;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof _dereq_=="function"&&_dereq_;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
@@ -2027,10 +2027,11 @@ Promise.filter = function (promises, fn, options) {
 
 },{}],15:[function(_dereq_,module,exports){
 "use strict";
-module.exports = function(Promise, tryConvertToPromise) {
+module.exports = function(Promise, tryConvertToPromise, NEXT_FILTER) {
 var util = _dereq_("./util");
 var CancellationError = Promise.CancellationError;
 var errorObj = util.errorObj;
+var catchFilter = _dereq_("./catch_filter")(NEXT_FILTER);
 
 function PassThroughHandlerContext(promise, type, handler) {
     this.promise = promise;
@@ -2082,7 +2083,9 @@ function finallyHandler(reasonOrValue) {
         var ret = this.isFinallyHandler()
             ? handler.call(promise._boundValue())
             : handler.call(promise._boundValue(), reasonOrValue);
-        if (ret !== undefined) {
+        if (ret === NEXT_FILTER) {
+            return ret;
+        } else if (ret !== undefined) {
             promise._setReturnedNonUndefined();
             var maybePromise = tryConvertToPromise(ret, promise);
             if (maybePromise instanceof Promise) {
@@ -2131,14 +2134,46 @@ Promise.prototype["finally"] = function (handler) {
                              finallyHandler);
 };
 
+
 Promise.prototype.tap = function (handler) {
     return this._passThrough(handler, 1, finallyHandler);
+};
+
+Promise.prototype.tapCatch = function (handlerOrPredicate) {
+    var len = arguments.length;
+    if(len === 1) {
+        return this._passThrough(handlerOrPredicate,
+                                 1,
+                                 undefined,
+                                 finallyHandler);
+    } else {
+         var catchInstances = new Array(len - 1),
+            j = 0, i;
+        for (i = 0; i < len - 1; ++i) {
+            var item = arguments[i];
+            if (util.isObject(item)) {
+                catchInstances[j++] = item;
+            } else {
+                return Promise.reject(new TypeError(
+                    "tapCatch statement predicate: "
+                    + "expecting an object but got " + util.classString(item)
+                ));
+            }
+        }
+        catchInstances.length = j;
+        var handler = arguments[i];
+        return this._passThrough(catchFilter(catchInstances, handler, this),
+                                 1,
+                                 undefined,
+                                 finallyHandler);
+    }
+
 };
 
 return PassThroughHandlerContext;
 };
 
-},{"./util":36}],16:[function(_dereq_,module,exports){
+},{"./catch_filter":7,"./util":36}],16:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise,
                           apiRejection,
@@ -2298,7 +2333,7 @@ PromiseSpawn.prototype._continue = function (result) {
             if (maybePromise === null) {
                 this._promiseRejected(
                     new TypeError(
-                        "A value %s was yielded that could not be treated as a promise\u000a\u000a    See http://goo.gl/MqrFmX\u000a\u000a".replace("%s", value) +
+                        "A value %s was yielded that could not be treated as a promise\u000a\u000a    See http://goo.gl/MqrFmX\u000a\u000a".replace("%s", String(value)) +
                         "From coroutine:\u000a" +
                         this._stack.split("\n").slice(1, -7).join("\n")
                     )
@@ -2928,30 +2963,31 @@ var createContext = Context.create;
 var debug = _dereq_("./debuggability")(Promise, Context);
 var CapturedTrace = debug.CapturedTrace;
 var PassThroughHandlerContext =
-    _dereq_("./finally")(Promise, tryConvertToPromise);
+    _dereq_("./finally")(Promise, tryConvertToPromise, NEXT_FILTER);
 var catchFilter = _dereq_("./catch_filter")(NEXT_FILTER);
 var nodebackForPromise = _dereq_("./nodeback");
 var errorObj = util.errorObj;
 var tryCatch = util.tryCatch;
 function check(self, executor) {
+    if (self == null || self.constructor !== Promise) {
+        throw new TypeError("the promise constructor cannot be invoked directly\u000a\u000a    See http://goo.gl/MqrFmX\u000a");
+    }
     if (typeof executor !== "function") {
         throw new TypeError("expecting a function but got " + util.classString(executor));
     }
-    if (self.constructor !== Promise) {
-        throw new TypeError("the promise constructor cannot be invoked directly\u000a\u000a    See http://goo.gl/MqrFmX\u000a");
-    }
+
 }
 
 function Promise(executor) {
+    if (executor !== INTERNAL) {
+        check(this, executor);
+    }
     this._bitField = 0;
     this._fulfillmentHandler0 = undefined;
     this._rejectionHandler0 = undefined;
     this._promise0 = undefined;
     this._receiver0 = undefined;
-    if (executor !== INTERNAL) {
-        check(this, executor);
-        this._resolveFromExecutor(executor);
-    }
+    this._resolveFromExecutor(executor);
     this._promiseCreated();
     this._fireEvent("promiseCreated", this);
 }
@@ -2970,8 +3006,8 @@ Promise.prototype.caught = Promise.prototype["catch"] = function (fn) {
             if (util.isObject(item)) {
                 catchInstances[j++] = item;
             } else {
-                return apiRejection("expecting an object but got " +
-                    "A catch statement predicate " + util.classString(item));
+                return apiRejection("Catch statement predicate: " +
+                    "expecting an object but got " + util.classString(item));
             }
         }
         catchInstances.length = j;
@@ -3350,6 +3386,7 @@ function(reason, synchronous, ignoreNonErrorWarnings) {
 };
 
 Promise.prototype._resolveFromExecutor = function (executor) {
+    if (executor === INTERNAL) return;
     var promise = this;
     this._captureStackTrace();
     this._pushContext();
@@ -3607,7 +3644,7 @@ _dereq_("./synchronous_inspection")(Promise);
 _dereq_("./join")(
     Promise, PromiseArray, tryConvertToPromise, INTERNAL, async, getDomain);
 Promise.Promise = Promise;
-Promise.version = "3.4.7";
+Promise.version = "3.5.0";
 _dereq_('./map.js')(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL, debug);
 _dereq_('./call_get.js')(Promise);
 _dereq_('./using.js')(Promise, apiRejection, tryConvertToPromise, createContext, INTERNAL, debug);
@@ -3659,6 +3696,7 @@ function toResolutionValue(val) {
     switch(val) {
     case -2: return [];
     case -3: return {};
+    case -6: return new Map();
     }
 }
 
@@ -4208,7 +4246,7 @@ function PropertiesPromiseArray(obj) {
     }
     this.constructor$(entries);
     this._isMap = isMap;
-    this._init$(undefined, -3);
+    this._init$(undefined, isMap ? -6 : -3);
 }
 util.inherits(PropertiesPromiseArray, PromiseArray);
 
@@ -4607,11 +4645,11 @@ if (util.isNode && typeof MutationObserver === "undefined") {
 
         var scheduleToggle = function() {
             if (toggleScheduled) return;
-                toggleScheduled = true;
-                div2.classList.toggle("foo");
-            };
+            toggleScheduled = true;
+            div2.classList.toggle("foo");
+        };
 
-            return function schedule(fn) {
+        return function schedule(fn) {
             var o = new MutationObserver(function() {
                 o.disconnect();
                 fn();
@@ -5784,31 +5822,24 @@ exports.f = __webpack_require__(5) ? Object.defineProperty : function defineProp
 
 /***/ }),
 /* 8 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_bluebird__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_bluebird___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_bluebird__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_debounce__ = __webpack_require__(94);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_debounce___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_debounce__);
+/* harmony export (immutable) */ __webpack_exports__["c"] = jsonify;
+/* harmony export (immutable) */ __webpack_exports__["b"] = numFormat;
+/* unused harmony export sleep */
+/* harmony export (immutable) */ __webpack_exports__["d"] = debounce;
+/* unused harmony export print */
+/* harmony export (immutable) */ __webpack_exports__["a"] = printError;
+/* harmony export (immutable) */ __webpack_exports__["e"] = diffDays;
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.jsonify = jsonify;
-exports.numFormat = numFormat;
-exports.sleep = sleep;
-exports.debounce = debounce;
-exports.print = print;
-exports.printError = printError;
-exports.diffDays = diffDays;
 
-var _bluebird = __webpack_require__(3);
 
-var _bluebird2 = _interopRequireDefault(_bluebird);
-
-var _debounce = __webpack_require__(94);
-
-var _debounce2 = _interopRequireDefault(_debounce);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function jsonify(func) {
   return function () {
@@ -5816,12 +5847,12 @@ function jsonify(func) {
       var text = data.responseText;
       try {
         var json = JSON.parse(text);
-        return _bluebird2.default.resolve(json);
+        return __WEBPACK_IMPORTED_MODULE_0_bluebird___default.a.resolve(json);
       } catch (err) {
-        return _bluebird2.default.reject(err);
+        return __WEBPACK_IMPORTED_MODULE_0_bluebird___default.a.reject(err);
       }
     }).catch(function (err) {
-      return _bluebird2.default.reject(err);
+      return __WEBPACK_IMPORTED_MODULE_0_bluebird___default.a.reject(err);
     });
   };
 }
@@ -5831,7 +5862,7 @@ function numFormat(num) {
 }
 
 function sleep(ms) {
-  return new _bluebird2.default(function (resolve, reject) {
+  return new __WEBPACK_IMPORTED_MODULE_0_bluebird___default.a(function (resolve, reject) {
     setTimeout(function () {
       resolve();
     }, ms);
@@ -5839,7 +5870,7 @@ function sleep(ms) {
 }
 
 function debounce() {
-  return _debounce2.default.apply(this, arguments);
+  return __WEBPACK_IMPORTED_MODULE_1_debounce___default.a.apply(this, arguments);
 }
 
 function print(msg) {
@@ -5967,58 +5998,47 @@ module.exports = g;
 
 /***/ }),
 /* 14 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = {
+/* harmony default export */ __webpack_exports__["a"] = {
   dev: "production" === "development",
   prod: "production" === "production"
 };
 
 /***/ }),
 /* 15 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_bluebird__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_bluebird___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_bluebird__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__http__ = __webpack_require__(32);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__svg__ = __webpack_require__(53);
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 
-var _bluebird = __webpack_require__(3);
 
-var _bluebird2 = _interopRequireDefault(_bluebird);
 
-var _http = __webpack_require__(32);
 
-var _utils = __webpack_require__(8);
-
-var _svg = __webpack_require__(53);
-
-var _svg2 = _interopRequireDefault(_svg);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var GITHUB_API = 'https://api.github.com';
 var CLIENT_ID = 'b8257841dd7ca5eef2aa';
 var CLIENT_SECRET = '4da33dd6fcb0a01d395945ad18613ecf9c12079e';
 
 function fetchRepoInfo(githubRepoPath) {
-  return _http.http.get(GITHUB_API + '/repos/' + githubRepoPath.trim().replace(/^\/+/g, '') + '?client_id=' + CLIENT_ID + '&client_secret=' + CLIENT_SECRET);
+  return __WEBPACK_IMPORTED_MODULE_1__http__["a" /* http */].get(GITHUB_API + '/repos/' + githubRepoPath.trim().replace(/^\/+/g, '') + '?client_id=' + CLIENT_ID + '&client_secret=' + CLIENT_SECRET);
 }
 
 function fetchUserInfo(username) {
-  return _http.http.get(GITHUB_API + '/users/' + username + '?client_id=' + CLIENT_ID + '&client_secret=' + CLIENT_SECRET);
+  return __WEBPACK_IMPORTED_MODULE_1__http__["a" /* http */].get(GITHUB_API + '/users/' + username + '?client_id=' + CLIENT_ID + '&client_secret=' + CLIENT_SECRET);
 }
 
 function fetchRepoBranchInfo(githubRepoPath, branch) {
-  return _http.http.get(GITHUB_API + '/repos/' + githubRepoPath.trim().replace(/^\/+/g, '') + '/branches/' + branch + '?client_id=' + CLIENT_ID + '&client_secret=' + CLIENT_SECRET);
+  return __WEBPACK_IMPORTED_MODULE_1__http__["a" /* http */].get(GITHUB_API + '/repos/' + githubRepoPath.trim().replace(/^\/+/g, '') + '/branches/' + branch + '?client_id=' + CLIENT_ID + '&client_secret=' + CLIENT_SECRET);
 }
 
 function createWidget(containerTagName) {
@@ -6037,13 +6057,13 @@ function createWidget(containerTagName) {
     var starEle = span.cloneNode(false);
     var forkEle = span.cloneNode(false);
 
-    watchEle.appendChild(_svg2.default.watch);
-    starEle.appendChild(_svg2.default.star);
-    forkEle.appendChild(_svg2.default.fork);
+    watchEle.appendChild(__WEBPACK_IMPORTED_MODULE_3__svg__["a" /* default */].watch);
+    starEle.appendChild(__WEBPACK_IMPORTED_MODULE_3__svg__["a" /* default */].star);
+    forkEle.appendChild(__WEBPACK_IMPORTED_MODULE_3__svg__["a" /* default */].fork);
 
-    watchEle.innerHTML += '&nbsp;' + (0, _utils.numFormat)(watch) + '&nbsp;';
-    starEle.innerHTML += '&nbsp;' + (0, _utils.numFormat)(star) + '&nbsp;';
-    forkEle.innerHTML += '&nbsp;' + (0, _utils.numFormat)(fork);
+    watchEle.innerHTML += '&nbsp;' + __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_2__utils__["b" /* numFormat */])(watch) + '&nbsp;';
+    starEle.innerHTML += '&nbsp;' + __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_2__utils__["b" /* numFormat */])(star) + '&nbsp;';
+    forkEle.innerHTML += '&nbsp;' + __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_2__utils__["b" /* numFormat */])(fork);
 
     container.appendChild(watchEle);
     container.appendChild(starEle);
@@ -6053,10 +6073,10 @@ function createWidget(containerTagName) {
   };
 }
 
-exports.default = {
-  fetchUserInfo: (0, _utils.jsonify)(fetchUserInfo),
-  fetchRepoInfo: (0, _utils.jsonify)(fetchRepoInfo),
-  fetchRepoBranchInfo: (0, _utils.jsonify)(fetchRepoBranchInfo),
+/* harmony default export */ __webpack_exports__["a"] = {
+  fetchUserInfo: __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_2__utils__["c" /* jsonify */])(fetchUserInfo),
+  fetchRepoInfo: __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_2__utils__["c" /* jsonify */])(fetchRepoInfo),
+  fetchRepoBranchInfo: __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_2__utils__["c" /* jsonify */])(fetchRepoBranchInfo),
   createWidget: createWidget
 };
 
@@ -6155,27 +6175,24 @@ module.exports = function(it){
 
 /***/ }),
 /* 20 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__http__ = __webpack_require__(32);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__utils__ = __webpack_require__(8);
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 
-var _http = __webpack_require__(32);
 
-var _utils = __webpack_require__(8);
 
 var registry = 'https://registry.npm.taobao.org';
 
 function fetchPackageInfo(name) {
-  return _http.http.get(registry + '/' + name.trim() + '/latest');
+  return __WEBPACK_IMPORTED_MODULE_0__http__["a" /* http */].get(registry + '/' + name.trim() + '/latest');
 }
 
-exports.default = {
-  fetchPackageInfo: (0, _utils.jsonify)(fetchPackageInfo)
+/* harmony default export */ __webpack_exports__["a"] = {
+  fetchPackageInfo: __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_1__utils__["c" /* jsonify */])(fetchPackageInfo)
 };
 
 /***/ }),
@@ -6610,104 +6627,97 @@ process.umask = function() { return 0; };
 
 /***/ }),
 /* 32 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_classCallCheck__ = __webpack_require__(57);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_classCallCheck___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_classCallCheck__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_createClass__ = __webpack_require__(58);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_createClass___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_createClass__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_underscore__ = __webpack_require__(104);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_underscore___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2_underscore__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_bluebird__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_bluebird___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_bluebird__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return http; });
+/* unused harmony export timeout */
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.timeout = exports.http = undefined;
 
-var _classCallCheck2 = __webpack_require__(57);
 
-var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
 
-var _createClass2 = __webpack_require__(58);
 
-var _createClass3 = _interopRequireDefault(_createClass2);
 
-var _underscore = __webpack_require__(104);
 
-var _ = _interopRequireWildcard(_underscore);
 
-var _bluebird = __webpack_require__(3);
-
-var _bluebird2 = _interopRequireDefault(_bluebird);
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var Http = function () {
   function Http(options) {
-    (0, _classCallCheck3.default)(this, Http);
+    __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_classCallCheck___default()(this, Http);
 
     this.options = options;
   }
 
-  (0, _createClass3.default)(Http, [{
+  __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_createClass___default()(Http, [{
     key: 'request',
     value: function request(requestOptions) {
-      var options = _.extend({}, this.options, requestOptions);
+      var options = __WEBPACK_IMPORTED_MODULE_2_underscore__["extend"]({}, this.options, requestOptions);
       var onreadystatechange = options.onreadystatechange,
           onerror = options.onerror,
           onabort = options.onabort,
           ontimeout = options.ontimeout;
 
 
-      return new _bluebird2.default(function (resolve, reject) {
+      return new __WEBPACK_IMPORTED_MODULE_3_bluebird___default.a(function (resolve, reject) {
         // options.synchronous = true;   // async
         options.onreadystatechange = function (response) {
-          _.isFunction(onreadystatechange) && onreadystatechange.call(this, response);
+          __WEBPACK_IMPORTED_MODULE_2_underscore__["isFunction"](onreadystatechange) && onreadystatechange.call(this, response);
           if (response.readyState !== 4) return;
           response.status >= 200 && response.status < 400 ? resolve(response) : reject(response);
         };
 
         options.onerror = function (response) {
-          _.isFunction(onerror) && onerror.call(this, response);
+          __WEBPACK_IMPORTED_MODULE_2_underscore__["isFunction"](onerror) && onerror.call(this, response);
           reject(response);
         };
 
         options.onabort = function (response) {
-          _.isFunction(onabort) && onabort.call(this, response);
+          __WEBPACK_IMPORTED_MODULE_2_underscore__["isFunction"](onabort) && onabort.call(this, response);
           reject(response);
         };
 
         options.ontimeout = function (response) {
-          _.isFunction(ontimeout) && ontimeout.call(this, response);
+          __WEBPACK_IMPORTED_MODULE_2_underscore__["isFunction"](ontimeout) && ontimeout.call(this, response);
           reject(response);
         };
 
-        GM_xmlhttpRequest(_.extend({}, options));
+        GM_xmlhttpRequest(__WEBPACK_IMPORTED_MODULE_2_underscore__["extend"]({}, options));
       });
     }
   }, {
     key: 'get',
     value: function get(url, options) {
-      var requestOptions = _.extend(options || {}, { url: url, method: 'GET' });
+      var requestOptions = __WEBPACK_IMPORTED_MODULE_2_underscore__["extend"](options || {}, { url: url, method: 'GET' });
       return this.request(requestOptions);
     }
   }, {
     key: 'post',
     value: function post(url, data, options) {
-      return this.request(_.extend(options || {}, { url: url, method: 'POST', data: data }));
+      return this.request(__WEBPACK_IMPORTED_MODULE_2_underscore__["extend"](options || {}, { url: url, method: 'POST', data: data }));
     }
   }, {
     key: 'head',
     value: function head(url, options) {
-      return this.request(_.extend(options || {}, { url: url, method: 'HEAD' }));
+      return this.request(__WEBPACK_IMPORTED_MODULE_2_underscore__["extend"](options || {}, { url: url, method: 'HEAD' }));
     }
   }]);
+
   return Http;
 }();
 
 var timeout = 5000;
 var http = new Http({ timeout: timeout });
 
-exports.http = http;
-exports.timeout = timeout;
+
 
 /***/ }),
 /* 33 */
@@ -7057,34 +7067,40 @@ __webpack_require__(40)(String, 'String', function(iterated){
 
 /***/ }),
 /* 49 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify__ = __webpack_require__(33);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_parse_github_url__ = __webpack_require__(30);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_parse_github_url___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_parse_github_url__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_bluebird__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_bluebird___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4_bluebird__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__npm__ = __webpack_require__(20);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__github__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__env__ = __webpack_require__(14);
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 
-var _regenerator = __webpack_require__(10);
 
-var _regenerator2 = _interopRequireDefault(_regenerator);
 
-var _stringify = __webpack_require__(33);
 
-var _stringify2 = _interopRequireDefault(_stringify);
 
-var _asyncToGenerator2 = __webpack_require__(9);
 
-var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
-exports.default = function () {
+
+
+/* harmony default export */ __webpack_exports__["a"] = function () {
   return function () {
-    var _ref = (0, _asyncToGenerator3.default)(_regenerator2.default.mark(function _callee2() {
+    var _ref = __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator___default()(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.mark(function _callee2() {
       var _this = this;
 
       var span;
-      return _regenerator2.default.wrap(function _callee2$(_context2) {
+      return __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.wrap(function _callee2$(_context2) {
         while (1) {
           switch (_context2.prev = _context2.next) {
             case 0:
@@ -7096,23 +7112,23 @@ exports.default = function () {
               });
 
               document.querySelectorAll('ul.columnar>li').forEach(function () {
-                var _ref2 = (0, _asyncToGenerator3.default)(_regenerator2.default.mark(function _callee(ele) {
+                var _ref2 = __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator___default()(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.mark(function _callee(ele) {
                   var aEle, name, npmPackage, repoInfo, gitRepoInfo, _github$createWidget, container;
 
-                  return _regenerator2.default.wrap(function _callee$(_context) {
+                  return __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.wrap(function _callee$(_context) {
                     while (1) {
                       switch (_context.prev = _context.next) {
                         case 0:
                           aEle = ele.querySelector('a.name');
                           name = aEle.innerText || aEle.textContent;
                           _context.next = 4;
-                          return _npm2.default.fetchPackageInfo(name);
+                          return __WEBPACK_IMPORTED_MODULE_5__npm__["a" /* default */].fetchPackageInfo(name);
 
                         case 4:
                           npmPackage = _context.sent;
 
 
-                          _env2.default.dev && ele.setAttribute('package', (0, _stringify2.default)(npmPackage));
+                          __WEBPACK_IMPORTED_MODULE_7__env__["a" /* default */].dev && ele.setAttribute('package', __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify___default()(npmPackage));
 
                           if (npmPackage.repository) {
                             _context.next = 8;
@@ -7122,10 +7138,10 @@ exports.default = function () {
                           return _context.abrupt('return', console.error(npmPackage.name + ' doesn\'t has repository field'));
 
                         case 8:
-                          repoInfo = (0, _parseGithubUrl2.default)(npmPackage.repository.url);
+                          repoInfo = __WEBPACK_IMPORTED_MODULE_3_parse_github_url___default()(npmPackage.repository.url);
 
 
-                          _env2.default.dev && ele.setAttribute('repository-info', (0, _stringify2.default)(repoInfo));
+                          __WEBPACK_IMPORTED_MODULE_7__env__["a" /* default */].dev && ele.setAttribute('repository-info', __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify___default()(repoInfo));
 
                           if (repoInfo) {
                             _context.next = 12;
@@ -7144,15 +7160,15 @@ exports.default = function () {
 
                         case 14:
                           _context.next = 16;
-                          return _github2.default.fetchRepoInfo(repoInfo.repo);
+                          return __WEBPACK_IMPORTED_MODULE_6__github__["a" /* default */].fetchRepoInfo(repoInfo.repo);
 
                         case 16:
                           gitRepoInfo = _context.sent;
 
 
-                          _env2.default.dev && ele.setAttribute('github-info', (0, _stringify2.default)(gitRepoInfo));
+                          __WEBPACK_IMPORTED_MODULE_7__env__["a" /* default */].dev && ele.setAttribute('github-info', __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify___default()(gitRepoInfo));
 
-                          _github$createWidget = _github2.default.createWidget('span')({
+                          _github$createWidget = __WEBPACK_IMPORTED_MODULE_6__github__["a" /* default */].createWidget('span')({
                             watch: gitRepoInfo.subscribers_count,
                             star: gitRepoInfo.watchers_count,
                             fork: gitRepoInfo.forks_count
@@ -7190,58 +7206,61 @@ exports.default = function () {
   }();
 };
 
-var _parseGithubUrl = __webpack_require__(30);
-
-var _parseGithubUrl2 = _interopRequireDefault(_parseGithubUrl);
-
-var _bluebird = __webpack_require__(3);
-
-var _bluebird2 = _interopRequireDefault(_bluebird);
-
-var _npm = __webpack_require__(20);
-
-var _npm2 = _interopRequireDefault(_npm);
-
-var _github = __webpack_require__(15);
-
-var _github2 = _interopRequireDefault(_github);
-
-var _env = __webpack_require__(14);
-
-var _env2 = _interopRequireDefault(_env);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 /***/ }),
 /* 50 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_toConsumableArray__ = __webpack_require__(59);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_toConsumableArray___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_toConsumableArray__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_regenerator__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_regenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_babel_runtime_regenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_bluebird__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_bluebird___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_bluebird__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__github__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5_timeago_js__ = __webpack_require__(102);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5_timeago_js___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5_timeago_js__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__utils__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__env__ = __webpack_require__(14);
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 
-var _toConsumableArray2 = __webpack_require__(59);
 
-var _toConsumableArray3 = _interopRequireDefault(_toConsumableArray2);
 
-var _regenerator = __webpack_require__(10);
 
-var _regenerator2 = _interopRequireDefault(_regenerator);
 
-var _asyncToGenerator2 = __webpack_require__(9);
 
-var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
-exports.default = function () {
+
+
+function generateOutdatedWarning(date, diffDays) {
+  var span = document.createElement('span');
+  var tags = {
+    deprecated: { name: "Deprecated", color: "red" },
+    outdated: { name: "Outdated", color: "blue" }
+  };
+  var tag = null;
+  if (diffDays > 365) {
+    tag = tags.deprecated;
+  } else if (diffDays > 180) {
+    tag = tags.outdated;
+  }
+  span.innerHTML = (tag ? '<strong style="color: ' + tag.color + '">@' + tag.name + '</strong> ' : '') + ('last commit at <strong style="color: #283546;">' + new __WEBPACK_IMPORTED_MODULE_5_timeago_js___default.a().format(date) + '</strong>');
+  span.style.color = 'rgba(0, 0, 0, 0.6)';
+  span.style.fontSize = '16px';
+  span.style.verticalAlign = 'middle';
+  return span;
+}
+
+/* harmony default export */ __webpack_exports__["a"] = function () {
 
   return function () {
-    var _ref = (0, _asyncToGenerator3.default)(_regenerator2.default.mark(function _callee() {
+    var _ref = __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator___default()(__WEBPACK_IMPORTED_MODULE_1_babel_runtime_regenerator___default.a.mark(function _callee() {
       var githubLink, gitRepoInfo, _github$createWidget, container, gitBranchInfo, lastCommit, lastCommitter, commitFromNowDiffDays, span;
 
-      return _regenerator2.default.wrap(function _callee$(_context) {
+      return __WEBPACK_IMPORTED_MODULE_1_babel_runtime_regenerator___default.a.wrap(function _callee$(_context) {
         while (1) {
           switch (_context.prev = _context.next) {
             case 0:
@@ -7261,23 +7280,23 @@ exports.default = function () {
             case 5:
               githubLink.title = githubLink.href;
               _context.next = 8;
-              return _github2.default.fetchRepoInfo(githubLink.pathname);
+              return __WEBPACK_IMPORTED_MODULE_4__github__["a" /* default */].fetchRepoInfo(githubLink.pathname);
 
             case 8:
               gitRepoInfo = _context.sent;
-              _github$createWidget = _github2.default.createWidget('li')({
+              _github$createWidget = __WEBPACK_IMPORTED_MODULE_4__github__["a" /* default */].createWidget('li')({
                 watch: gitRepoInfo.subscribers_count,
                 star: gitRepoInfo.watchers_count,
                 fork: gitRepoInfo.forks_count
               }), container = _github$createWidget.container;
               _context.next = 12;
-              return _github2.default.fetchRepoBranchInfo(githubLink.pathname, 'master');
+              return __WEBPACK_IMPORTED_MODULE_4__github__["a" /* default */].fetchRepoBranchInfo(githubLink.pathname, 'master');
 
             case 12:
               gitBranchInfo = _context.sent;
               lastCommit = gitBranchInfo.commit.commit;
               lastCommitter = lastCommit.committer;
-              commitFromNowDiffDays = (0, _utils.diffDays)(new Date(), lastCommitter.date);
+              commitFromNowDiffDays = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_6__utils__["e" /* diffDays */])(new Date(), lastCommitter.date);
 
               // warning
 
@@ -7303,46 +7322,6 @@ exports.default = function () {
   }();
 };
 
-var _bluebird = __webpack_require__(3);
-
-var _bluebird2 = _interopRequireDefault(_bluebird);
-
-var _github = __webpack_require__(15);
-
-var _github2 = _interopRequireDefault(_github);
-
-var _timeago = __webpack_require__(102);
-
-var _timeago2 = _interopRequireDefault(_timeago);
-
-var _utils = __webpack_require__(8);
-
-var _env = __webpack_require__(14);
-
-var _env2 = _interopRequireDefault(_env);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function generateOutdatedWarning(date, diffDays) {
-  var span = document.createElement('span');
-  var tags = {
-    deprecated: { name: "Deprecated", color: "red" },
-    outdated: { name: "Outdated", color: "blue" }
-  };
-  var tag = null;
-  if (diffDays > 365) {
-    tag = tags.deprecated;
-  } else if (diffDays > 180) {
-    tag = tags.outdated;
-  }
-  span.innerHTML = (tag ? '<strong style="color: ' + tag.color + '">@' + tag.name + '</strong> ' : '') + ('last commit at <strong style="color: #283546;">' + new _timeago2.default().format(date) + '</strong>');
-  span.style.color = 'rgba(0, 0, 0, 0.6)';
-  span.style.fontSize = '16px';
-  span.style.verticalAlign = 'middle';
-  return span;
-}
-
-
 function getElementText(ele) {
   return ele.innerText || ele.textContent;
 }
@@ -7352,7 +7331,7 @@ function parseJSCodeBlock() {
 
   var js = document.querySelectorAll('.highlight.js pre .line .source');
   var javascript = document.querySelectorAll('.highlight.javascript pre .line .source');
-  var lines = (_slice$call = [].slice.call(js)).concat.apply(_slice$call, (0, _toConsumableArray3.default)(javascript));
+  var lines = (_slice$call = [].slice.call(js)).concat.apply(_slice$call, __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_toConsumableArray___default()(javascript));
 
   try {
     lines.forEach(function (line) {
@@ -7368,7 +7347,7 @@ function parseJSCodeBlock() {
           var packageNameMatch = requireName.match(/(^\@[^\/]+\/[^\/]+)|([^\/]+)/) || [];
           var packageName = packageNameMatch[0];
 
-          if (_env2.default.dev) {
+          if (__WEBPACK_IMPORTED_MODULE_7__env__["a" /* default */].dev) {
             console.info('[Parse Javascript]: ' + requireName + ' >>> ' + packageName);
           }
 
@@ -7394,53 +7373,51 @@ function parseShellCodeBlock() {
   var sh = document.querySelectorAll('.highlight.sh pre .line .source');
   var bash = document.querySelectorAll('.highlight.bash pre .line');
   var noTag = document.querySelectorAll('pre:not(.highlight) code');
-  var lines = (_slice$call$concat = (_slice$call2 = [].slice.call(sh)).concat.apply(_slice$call2, (0, _toConsumableArray3.default)(bash))).concat.apply(_slice$call$concat, (0, _toConsumableArray3.default)(noTag));
+  var lines = (_slice$call$concat = (_slice$call2 = [].slice.call(sh)).concat.apply(_slice$call2, __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_toConsumableArray___default()(bash))).concat.apply(_slice$call$concat, __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_toConsumableArray___default()(noTag));
 
   try {
     lines.forEach(function (line) {
       var match = getElementText(line).trim().replace(/^\$\s*/, '').match(/(npm)\s+(install)\s+((--?[\w]+\s)?|\s+)+([\w\-\@\.\_\/]+)/g);
       if (match && match.length) {
-        (function () {
 
-          var matchStr = match[0].trim();
+        var matchStr = match[0].trim();
 
-          var commands = matchStr.split(/\s+/g).map(function (v) {
-            return v.trim();
-          });
-          var command = '',
-              action = '',
-              target = '';
-          var argv = [];
+        var commands = matchStr.split(/\s+/g).map(function (v) {
+          return v.trim();
+        });
+        var command = '',
+            action = '',
+            target = '';
+        var argv = [];
 
-          commands.forEach(function (str, index) {
-            if (index === 0) return command = str;
-            if (index === 1) return action = str;
+        commands.forEach(function (str, index) {
+          if (index === 0) return command = str;
+          if (index === 1) return action = str;
 
-            // argv
-            if (/^\-/.test(str)) {
-              argv.push(str);
-            } else {
-              target = str;
-            }
-          });
-
-          var packageName = (target || '').trim();
-
-          // 处理一些带有版本的命令
-          // example: npm install @reactivex/rxjs@5.0.0
-          // example: npm install -g express-generator@4
-          packageName = packageName.replace(/([^\s])\@[\.\w\-]+$/, '$1');
-
-          if (_env2.default.dev) {
-            console.log('[Parse Shell]: ' + matchStr + ' >>> ' + packageName);
+          // argv
+          if (/^\-/.test(str)) {
+            argv.push(str);
+          } else {
+            target = str;
           }
+        });
 
-          if (packageName) {
-            var packageUrl = 'https://www.npmjs.com/package/' + packageName;
-            line.innerHTML = line.innerHTML.replace(/\&nbsp\;/g, ' ') // remove empty string
-            .replace(target, '<a style="text-decoration: underline" title="' + packageUrl + '" href="' + packageUrl + '">' + target + '</a>');
-          }
-        })();
+        var packageName = (target || '').trim();
+
+        // 处理一些带有版本的命令
+        // example: npm install @reactivex/rxjs@5.0.0
+        // example: npm install -g express-generator@4
+        packageName = packageName.replace(/([^\s])\@[\.\w\-]+$/, '$1');
+
+        if (__WEBPACK_IMPORTED_MODULE_7__env__["a" /* default */].dev) {
+          console.log('[Parse Shell]: ' + matchStr + ' >>> ' + packageName);
+        }
+
+        if (packageName) {
+          var packageUrl = 'https://www.npmjs.com/package/' + packageName;
+          line.innerHTML = line.innerHTML.replace(/\&nbsp\;/g, ' ') // remove empty string
+          .replace(target, '<a style="text-decoration: underline" title="' + packageUrl + '" href="' + packageUrl + '">' + target + '</a>');
+        }
       }
     });
   } catch (err) {
@@ -7450,27 +7427,34 @@ function parseShellCodeBlock() {
 
 /***/ }),
 /* 51 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_asyncToGenerator__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_asyncToGenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_asyncToGenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_parse_github_url__ = __webpack_require__(30);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_parse_github_url___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2_parse_github_url__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_bluebird__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_bluebird___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_bluebird__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__npm__ = __webpack_require__(20);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__github__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__env__ = __webpack_require__(14);
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 
-var _regenerator = __webpack_require__(10);
 
-var _regenerator2 = _interopRequireDefault(_regenerator);
 
-var _asyncToGenerator2 = __webpack_require__(9);
 
-var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
-exports.default = function () {
+
+
+
+/* harmony default export */ __webpack_exports__["a"] = function () {
   return function () {
-    var _ref = (0, _asyncToGenerator3.default)(_regenerator2.default.mark(function _callee() {
-      return _regenerator2.default.wrap(function _callee$(_context) {
+    var _ref = __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_asyncToGenerator___default()(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.mark(function _callee() {
+      return __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.wrap(function _callee$(_context) {
         while (1) {
           switch (_context.prev = _context.next) {
             case 0:
@@ -7494,57 +7478,37 @@ exports.default = function () {
   }();
 };
 
-var _parseGithubUrl = __webpack_require__(30);
-
-var _parseGithubUrl2 = _interopRequireDefault(_parseGithubUrl);
-
-var _bluebird = __webpack_require__(3);
-
-var _bluebird2 = _interopRequireDefault(_bluebird);
-
-var _npm = __webpack_require__(20);
-
-var _npm2 = _interopRequireDefault(_npm);
-
-var _github = __webpack_require__(15);
-
-var _github2 = _interopRequireDefault(_github);
-
-var _env = __webpack_require__(14);
-
-var _env2 = _interopRequireDefault(_env);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 /***/ }),
 /* 52 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify__ = __webpack_require__(33);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_parse_github_url__ = __webpack_require__(30);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_parse_github_url___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_parse_github_url__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_bluebird__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_bluebird___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4_bluebird__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__npm__ = __webpack_require__(20);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__github__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__utils__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__env__ = __webpack_require__(14);
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 
-var _regenerator = __webpack_require__(10);
 
-var _regenerator2 = _interopRequireDefault(_regenerator);
 
-var _stringify = __webpack_require__(33);
-
-var _stringify2 = _interopRequireDefault(_stringify);
-
-var _asyncToGenerator2 = __webpack_require__(9);
-
-var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
 var searchPageHandler = function () {
-  var _ref = (0, _asyncToGenerator3.default)(_regenerator2.default.mark(function _callee2() {
+  var _ref = __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator___default()(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.mark(function _callee2() {
     var _this = this;
 
     var searchResults;
-    return _regenerator2.default.wrap(function _callee2$(_context2) {
+    return __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.wrap(function _callee2$(_context2) {
       while (1) {
         switch (_context2.prev = _context2.next) {
           case 0:
@@ -7554,24 +7518,24 @@ var searchPageHandler = function () {
             searchResults = document.querySelectorAll('.package-details');
 
             searchResults.forEach(function () {
-              var _ref2 = (0, _asyncToGenerator3.default)(_regenerator2.default.mark(function _callee(detailEle) {
+              var _ref2 = __WEBPACK_IMPORTED_MODULE_2_babel_runtime_helpers_asyncToGenerator___default()(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.mark(function _callee(detailEle) {
                 var nameEle, name, npmPackage, repoInfo, gitRepoInfo, _github$createWidget, container;
 
-                return _regenerator2.default.wrap(function _callee$(_context) {
+                return __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.wrap(function _callee$(_context) {
                   while (1) {
                     switch (_context.prev = _context.next) {
                       case 0:
-                        nameEle = detailEle.querySelector('.name');
+                        nameEle = detailEle.querySelector('.packageName');
                         name = nameEle.innerText || nameEle.textContent;
                         _context.next = 4;
-                        return _npm2.default.fetchPackageInfo(name);
+                        return __WEBPACK_IMPORTED_MODULE_5__npm__["a" /* default */].fetchPackageInfo(name);
 
                       case 4:
                         npmPackage = _context.sent;
-                        repoInfo = (0, _parseGithubUrl2.default)(npmPackage.repository.url);
+                        repoInfo = __WEBPACK_IMPORTED_MODULE_3_parse_github_url___default()(npmPackage.repository.url);
 
 
-                        _env2.default.dev && detailEle.setAttribute('repository-info', (0, _stringify2.default)(repoInfo));
+                        __WEBPACK_IMPORTED_MODULE_8__env__["a" /* default */].dev && detailEle.setAttribute('repository-info', __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify___default()(repoInfo));
 
                         if (repoInfo) {
                           _context.next = 9;
@@ -7590,15 +7554,15 @@ var searchPageHandler = function () {
 
                       case 11:
                         _context.next = 13;
-                        return _github2.default.fetchRepoInfo(repoInfo.repo);
+                        return __WEBPACK_IMPORTED_MODULE_6__github__["a" /* default */].fetchRepoInfo(repoInfo.repo);
 
                       case 13:
                         gitRepoInfo = _context.sent;
 
 
-                        _env2.default.dev && detailEle.setAttribute('github-info', (0, _stringify2.default)(gitRepoInfo));
+                        __WEBPACK_IMPORTED_MODULE_8__env__["a" /* default */].dev && detailEle.setAttribute('github-info', __WEBPACK_IMPORTED_MODULE_1_babel_runtime_core_js_json_stringify___default()(gitRepoInfo));
 
-                        _github$createWidget = _github2.default.createWidget('span')({
+                        _github$createWidget = __WEBPACK_IMPORTED_MODULE_6__github__["a" /* default */].createWidget('span')({
                           watch: gitRepoInfo.subscribers_count,
                           star: gitRepoInfo.watchers_count,
                           fork: gitRepoInfo.forks_count
@@ -7634,51 +7598,29 @@ var searchPageHandler = function () {
   };
 }();
 
-exports.default = function () {
-  return searchPageHandler;
-};
 
-var _parseGithubUrl = __webpack_require__(30);
 
-var _parseGithubUrl2 = _interopRequireDefault(_parseGithubUrl);
 
-var _bluebird = __webpack_require__(3);
 
-var _bluebird2 = _interopRequireDefault(_bluebird);
 
-var _npm = __webpack_require__(20);
 
-var _npm2 = _interopRequireDefault(_npm);
-
-var _github = __webpack_require__(15);
-
-var _github2 = _interopRequireDefault(_github);
-
-var _utils = __webpack_require__(8);
-
-var _env = __webpack_require__(14);
-
-var _env2 = _interopRequireDefault(_env);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var __pushState__ = history.pushState;
 
-window.history["pushState"] = (0, _utils.debounce)(function () {
+window.history["pushState"] = __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_7__utils__["d" /* debounce */])(function () {
   searchPageHandler();
   return __pushState__.apply(this, arguments);
 }, 100);
 
+/* harmony default export */ __webpack_exports__["a"] = function () {
+  return searchPageHandler;
+};
+
 /***/ }),
 /* 53 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 
 
 function createSvg(_ref) {
@@ -7722,7 +7664,7 @@ var svg = {
   })
 };
 
-exports.default = svg;
+/* harmony default export */ __webpack_exports__["a"] = svg;
 
 /***/ }),
 /* 54 */
@@ -9831,90 +9773,34 @@ if (hadRuntime) {
         return doneResult();
       }
 
+      context.method = method;
+      context.arg = arg;
+
       while (true) {
         var delegate = context.delegate;
         if (delegate) {
-          if (method === "return" ||
-              (method === "throw" && delegate.iterator[method] === undefined)) {
-            // A return or throw (when the delegate iterator has no throw
-            // method) always terminates the yield* loop.
-            context.delegate = null;
-
-            // If the delegate iterator has a return method, give it a
-            // chance to clean up.
-            var returnMethod = delegate.iterator["return"];
-            if (returnMethod) {
-              var record = tryCatch(returnMethod, delegate.iterator, arg);
-              if (record.type === "throw") {
-                // If the return method threw an exception, let that
-                // exception prevail over the original return or throw.
-                method = "throw";
-                arg = record.arg;
-                continue;
-              }
-            }
-
-            if (method === "return") {
-              // Continue with the outer return, now that the delegate
-              // iterator has been terminated.
-              continue;
-            }
+          var delegateResult = maybeInvokeDelegate(delegate, context);
+          if (delegateResult) {
+            if (delegateResult === ContinueSentinel) continue;
+            return delegateResult;
           }
-
-          var record = tryCatch(
-            delegate.iterator[method],
-            delegate.iterator,
-            arg
-          );
-
-          if (record.type === "throw") {
-            context.delegate = null;
-
-            // Like returning generator.throw(uncaught), but without the
-            // overhead of an extra function call.
-            method = "throw";
-            arg = record.arg;
-            continue;
-          }
-
-          // Delegate generator ran and handled its own exceptions so
-          // regardless of what the method was, we continue as if it is
-          // "next" with an undefined arg.
-          method = "next";
-          arg = undefined;
-
-          var info = record.arg;
-          if (info.done) {
-            context[delegate.resultName] = info.value;
-            context.next = delegate.nextLoc;
-          } else {
-            state = GenStateSuspendedYield;
-            return info;
-          }
-
-          context.delegate = null;
         }
 
-        if (method === "next") {
+        if (context.method === "next") {
           // Setting context._sent for legacy support of Babel's
           // function.sent implementation.
-          context.sent = context._sent = arg;
+          context.sent = context._sent = context.arg;
 
-        } else if (method === "throw") {
+        } else if (context.method === "throw") {
           if (state === GenStateSuspendedStart) {
             state = GenStateCompleted;
-            throw arg;
+            throw context.arg;
           }
 
-          if (context.dispatchException(arg)) {
-            // If the dispatched exception was caught by a catch block,
-            // then let that catch block handle the exception normally.
-            method = "next";
-            arg = undefined;
-          }
+          context.dispatchException(context.arg);
 
-        } else if (method === "return") {
-          context.abrupt("return", arg);
+        } else if (context.method === "return") {
+          context.abrupt("return", context.arg);
         }
 
         state = GenStateExecuting;
@@ -9927,30 +9813,106 @@ if (hadRuntime) {
             ? GenStateCompleted
             : GenStateSuspendedYield;
 
-          var info = {
+          if (record.arg === ContinueSentinel) {
+            continue;
+          }
+
+          return {
             value: record.arg,
             done: context.done
           };
 
-          if (record.arg === ContinueSentinel) {
-            if (context.delegate && method === "next") {
-              // Deliberately forget the last sent value so that we don't
-              // accidentally pass it on to the delegate.
-              arg = undefined;
-            }
-          } else {
-            return info;
-          }
-
         } else if (record.type === "throw") {
           state = GenStateCompleted;
           // Dispatch the exception by looping back around to the
-          // context.dispatchException(arg) call above.
-          method = "throw";
-          arg = record.arg;
+          // context.dispatchException(context.arg) call above.
+          context.method = "throw";
+          context.arg = record.arg;
         }
       }
     };
+  }
+
+  // Call delegate.iterator[context.method](context.arg) and handle the
+  // result, either by returning a { value, done } result from the
+  // delegate iterator, or by modifying context.method and context.arg,
+  // setting context.delegate to null, and returning the ContinueSentinel.
+  function maybeInvokeDelegate(delegate, context) {
+    var method = delegate.iterator[context.method];
+    if (method === undefined) {
+      // A .throw or .return when the delegate iterator has no .throw
+      // method always terminates the yield* loop.
+      context.delegate = null;
+
+      if (context.method === "throw") {
+        if (delegate.iterator.return) {
+          // If the delegate iterator has a return method, give it a
+          // chance to clean up.
+          context.method = "return";
+          context.arg = undefined;
+          maybeInvokeDelegate(delegate, context);
+
+          if (context.method === "throw") {
+            // If maybeInvokeDelegate(context) changed context.method from
+            // "return" to "throw", let that override the TypeError below.
+            return ContinueSentinel;
+          }
+        }
+
+        context.method = "throw";
+        context.arg = new TypeError(
+          "The iterator does not provide a 'throw' method");
+      }
+
+      return ContinueSentinel;
+    }
+
+    var record = tryCatch(method, delegate.iterator, context.arg);
+
+    if (record.type === "throw") {
+      context.method = "throw";
+      context.arg = record.arg;
+      context.delegate = null;
+      return ContinueSentinel;
+    }
+
+    var info = record.arg;
+
+    if (! info) {
+      context.method = "throw";
+      context.arg = new TypeError("iterator result is not an object");
+      context.delegate = null;
+      return ContinueSentinel;
+    }
+
+    if (info.done) {
+      // Assign the result of the finished delegate to the temporary
+      // variable specified by delegate.resultName (see delegateYield).
+      context[delegate.resultName] = info.value;
+
+      // Resume execution at the desired location (see delegateYield).
+      context.next = delegate.nextLoc;
+
+      // If context.method was "throw" but the delegate handled the
+      // exception, let the outer generator proceed normally. If
+      // context.method was "next", forget context.arg since it has been
+      // "consumed" by the delegate iterator. If context.method was
+      // "return", allow the original .return call to continue in the
+      // outer generator.
+      if (context.method !== "return") {
+        context.method = "next";
+        context.arg = undefined;
+      }
+
+    } else {
+      // Re-yield the result returned by the delegate method.
+      return info;
+    }
+
+    // The delegate iterator is finished, so forget it and continue with
+    // the outer generator.
+    context.delegate = null;
+    return ContinueSentinel;
   }
 
   // Define Generator.prototype.{next,throw,return} in terms of the
@@ -10073,6 +10035,9 @@ if (hadRuntime) {
       this.done = false;
       this.delegate = null;
 
+      this.method = "next";
+      this.arg = undefined;
+
       this.tryEntries.forEach(resetTryEntry);
 
       if (!skipTempReset) {
@@ -10109,7 +10074,15 @@ if (hadRuntime) {
         record.type = "throw";
         record.arg = exception;
         context.next = loc;
-        return !!caught;
+
+        if (caught) {
+          // If the dispatched exception was caught by a catch block,
+          // then let that catch block handle the exception normally.
+          context.method = "next";
+          context.arg = undefined;
+        }
+
+        return !! caught;
       }
 
       for (var i = this.tryEntries.length - 1; i >= 0; --i) {
@@ -10177,12 +10150,12 @@ if (hadRuntime) {
       record.arg = arg;
 
       if (finallyEntry) {
+        this.method = "next";
         this.next = finallyEntry.finallyLoc;
-      } else {
-        this.complete(record);
+        return ContinueSentinel;
       }
 
-      return ContinueSentinel;
+      return this.complete(record);
     },
 
     complete: function(record, afterLoc) {
@@ -10194,11 +10167,14 @@ if (hadRuntime) {
           record.type === "continue") {
         this.next = record.arg;
       } else if (record.type === "return") {
-        this.rval = record.arg;
+        this.rval = this.arg = record.arg;
+        this.method = "return";
         this.next = "end";
       } else if (record.type === "normal" && afterLoc) {
         this.next = afterLoc;
       }
+
+      return ContinueSentinel;
     },
 
     finish: function(finallyLoc) {
@@ -10236,6 +10212,12 @@ if (hadRuntime) {
         resultName: resultName,
         nextLoc: nextLoc
       };
+
+      if (this.method === "next") {
+        // Deliberately forget the last sent value so that we don't
+        // accidentally pass it on to the delegate.
+        this.arg = undefined;
+      }
 
       return ContinueSentinel;
     }
@@ -10448,7 +10430,7 @@ if (hadRuntime) {
 /* 102 */
 /***/ (function(module, exports) {
 
-!function(t,e){"object"==typeof module&&module.exports?module.exports=e(t):t.timeago=e(t)}("undefined"!=typeof window?window:this,function(){function t(t){return t instanceof Date?t:isNaN(t)?/^\d+$/.test(t)?new Date(e(t)):(t=(t||"").trim().replace(/\.\d+/,"").replace(/-/,"/").replace(/-/,"/").replace(/(\d)T(\d)/,"$1 $2").replace(/Z/," UTC").replace(/([\+\-]\d\d)\:?(\d\d)/," $1$2"),new Date(t)):new Date(e(t))}function e(t){return parseInt(t)}function n(t,n,r){n=d[n]?n:d[r]?r:"en";var i=0,a=t<0?1:0;for(t=Math.abs(t);t>=l[i]&&i<h;i++)t/=l[i];return t=e(t),i*=2,t>(0===i?9:1)&&(i+=1),d[n](t,i)[a].replace("%s",t)}function r(e,n){return n=n?t(n):new Date,(n-t(e))/1e3}function i(t){for(var e=1,n=0,r=Math.abs(t);t>=l[n]&&n<h;n++)t/=l[n],e*=l[n];return r%=e,r=r?e-r:e,Math.ceil(r)}function a(t){return t.dataset.timeago?t.dataset.timeago:t.getAttribute?t.getAttribute(p):t.attr?t.attr(p):void 0}function o(t,e){function o(a,c,f,s){var d=r(c,t);a.innerHTML=n(d,f,e),u["k"+s]=setTimeout(function(){o(a,c,f,s)},Math.min(1e3*i(d),2147483647))}var u={};return e||(e="en"),this.format=function(i,a){return n(r(i,t),a,e)},this.render=function(t,e){void 0===t.length&&(t=[t]);for(var n=0;n<t.length;n++)o(t[n],a(t[n]),e,++c)},this.cancel=function(){for(var t in u)clearTimeout(u[t]);u={}},this.setLocale=function(t){e=t},this}function u(t,e){return new o(t,e)}var c=0,f="second_minute_hour_day_week_month_year".split("_"),s="秒_分钟_小时_天_周_月_年".split("_"),d={en:function(t,e){if(0===e)return["just now","right now"];var n=f[parseInt(e/2)];return t>1&&(n+="s"),[t+" "+n+" ago","in "+t+" "+n]},zh_CN:function(t,e){if(0===e)return["刚刚","片刻后"];var n=s[parseInt(e/2)];return[t+n+"前",t+n+"后"]}},l=[60,60,24,7,365/7/12,12],h=6,p="datetime";return u.register=function(t,e){d[t]=e},u});
+!function(t,e){"object"==typeof module&&module.exports?(module.exports=e(),module.exports.default=module.exports):t.timeago=e()}("undefined"!=typeof window?window:this,function(){function t(t){return t instanceof Date?t:isNaN(t)?/^\d+$/.test(t)?new Date(e(t)):(t=(t||"").trim().replace(/\.\d+/,"").replace(/-/,"/").replace(/-/,"/").replace(/(\d)T(\d)/,"$1 $2").replace(/Z/," UTC").replace(/([\+\-]\d\d)\:?(\d\d)/," $1$2"),new Date(t)):new Date(e(t))}function e(t){return parseInt(t)}function n(t,n,r){n=p[n]?n:p[r]?r:"en";for(var o=0,i=t<0?1:0,a=t=Math.abs(t);t>=h[o]&&o<m;o++)t/=h[o];return t=e(t),o*=2,t>(0===o?9:1)&&(o+=1),p[n](t,o,a)[i].replace("%s",t)}function r(e,n){return((n=n?t(n):new Date)-t(e))/1e3}function o(t){for(var e=1,n=0,r=Math.abs(t);t>=h[n]&&n<m;n++)t/=h[n],e*=h[n];return r%=e,r=r?e-r:e,Math.ceil(r)}function i(t){return t.dataset.timeago?t.dataset.timeago:a(t,w)}function a(t,e){return t.getAttribute?t.getAttribute(e):t.attr?t.attr(e):void 0}function u(t,e){return t.setAttribute?t.setAttribute(_,e):t.attr?t.attr(_,e):void 0}function c(t){return a(t,_)}function d(t,e){this.nowDate=t,this.defaultLocale=e||"en"}function f(t,e){return new d(t,e)}var s="second_minute_hour_day_week_month_year".split("_"),l="秒_分钟_小时_天_周_月_年".split("_"),p={en:function(t,e){if(0===e)return["just now","right now"];var n=s[parseInt(e/2)];return t>1&&(n+="s"),[t+" "+n+" ago","in "+t+" "+n]},zh_CN:function(t,e){if(0===e)return["刚刚","片刻后"];var n=l[parseInt(e/2)];return[t+n+"前",t+n+"后"]}},h=[60,60,24,7,365/7/12,12],m=6,w="datetime",_="data-tid",v={};return d.prototype.doRender=function(t,e,i){var a,c=r(e,this.nowDate),d=this;t.innerHTML=n(c,i,this.defaultLocale),v[a=setTimeout(function(){d.doRender(t,e,i),delete v[a]},Math.min(1e3*o(c),2147483647))]=0,u(t,a)},d.prototype.format=function(t,e){return n(r(t,this.nowDate),e,this.defaultLocale)},d.prototype.render=function(t,e){void 0===t.length&&(t=[t]);for(var n=0,r=t.length;n<r;n++)this.doRender(t[n],i(t[n]),e)},d.prototype.setLocale=function(t){this.defaultLocale=t},f.register=function(t,e){p[t]=e},f.cancel=function(t){var e;if(t)(e=c(t))&&(clearTimeout(e),delete v[e]);else{for(e in v)clearTimeout(e);v={}}},f});
 
 /***/ }),
 /* 103 */
@@ -12856,36 +12838,41 @@ module.exports = function(module) {
 
 /***/ }),
 /* 108 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_asyncToGenerator__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_asyncToGenerator___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_asyncToGenerator__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__pages_detail__ = __webpack_require__(50);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__pages_search__ = __webpack_require__(52);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__pages_browse__ = __webpack_require__(49);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__pages_home__ = __webpack_require__(51);
 
 
-var _regenerator = __webpack_require__(10);
 
-var _regenerator2 = _interopRequireDefault(_regenerator);
 
-var _asyncToGenerator2 = __webpack_require__(9);
-
-var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
 var init = function () {
-  var _ref = (0, _asyncToGenerator3.default)(_regenerator2.default.mark(function _callee() {
+  var _ref = __WEBPACK_IMPORTED_MODULE_1_babel_runtime_helpers_asyncToGenerator___default()(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.mark(function _callee() {
     var href;
-    return _regenerator2.default.wrap(function _callee$(_context) {
+    return __WEBPACK_IMPORTED_MODULE_0_babel_runtime_regenerator___default.a.wrap(function _callee$(_context) {
       while (1) {
         switch (_context.prev = _context.next) {
           case 0:
             href = window.location.href;
 
             if (href.indexOf("package") >= 0) {
-              (0, _detail2.default)()().catch(_utils.printError);
+              __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_3__pages_detail__["a" /* default */])()().catch(__WEBPACK_IMPORTED_MODULE_2__utils__["a" /* printError */]);
             } else if (href.indexOf('search') >= 0) {
-              (0, _search2.default)()().catch(_utils.printError);
+              __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_4__pages_search__["a" /* default */])()().catch(__WEBPACK_IMPORTED_MODULE_2__utils__["a" /* printError */]);
             } else if (href.indexOf('browse') >= 0) {
-              (0, _browse2.default)()().catch(_utils.printError);
+              __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_5__pages_browse__["a" /* default */])()().catch(__WEBPACK_IMPORTED_MODULE_2__utils__["a" /* printError */]);
             } else {
-              (0, _home2.default)()().catch(_utils.printError);
+              __webpack_require__.i(__WEBPACK_IMPORTED_MODULE_6__pages_home__["a" /* default */])()().catch(__WEBPACK_IMPORTED_MODULE_2__utils__["a" /* printError */]);
             }
 
           case 2:
@@ -12901,25 +12888,12 @@ var init = function () {
   };
 }();
 
-var _utils = __webpack_require__(8);
 
-var _detail = __webpack_require__(50);
 
-var _detail2 = _interopRequireDefault(_detail);
 
-var _search = __webpack_require__(52);
 
-var _search2 = _interopRequireDefault(_search);
 
-var _browse = __webpack_require__(49);
 
-var _browse2 = _interopRequireDefault(_browse);
-
-var _home = __webpack_require__(51);
-
-var _home2 = _interopRequireDefault(_home);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 init();
 
