@@ -1,6 +1,6 @@
 {
   "name": "enhance-npm-community",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "一个用于增强npm官网的GM脚本",
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack --config webpack.dev.config.js --display-error-details --progress --colors --watch",
