@@ -24,7 +24,7 @@
     "babili": "^0.0.12",
     "cross-env": "^4.0.0",
     "css-loader": "^0.28.0",
-    "flow-bin": "^0.42.0",
+    "flow-bin": "^0.43.0",
     "style-loader": "^0.16.0",
     "webpack": "^2.2.1"
   },
