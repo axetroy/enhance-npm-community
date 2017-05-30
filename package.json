@@ -23,7 +23,7 @@
     "babel-preset-es2017": "^6.22.0",
     "babili": "^0.1.0",
     "cross-env": "^5.0.0",
-    "css-loader": "^0.28.0",
+    "css-loader": "^0.28.4",
     "flow-bin": "^0.47.0",
     "style-loader": "^0.18.0",
     "style-loader": "^0.18.0",
