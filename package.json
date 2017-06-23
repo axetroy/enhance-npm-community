@@ -27,7 +27,7 @@
     "flow-bin": "^0.47.0",
     "style-loader": "^0.18.0",
     "style-loader": "^0.18.0",
-    "webpack": "^2.2.1"
+    "webpack": "^3.0.0"
   },
   "dependencies": {
     "bluebird": "^3.4.7",
