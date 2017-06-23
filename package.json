@@ -33,7 +33,7 @@
     "bluebird": "^3.4.7",
     "debounce": "^1.0.0",
     "parse-github-url": "^1.0.0",
-    "timeago.js": "^3.0.0",
+    "timeago.js": "^3.0.2",
     "underscore": "^1.8.3"
   }
 }
