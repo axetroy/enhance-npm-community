@@ -25,8 +25,8 @@
     "cross-env": "^5.0.0",
     "css-loader": "^0.28.0",
     "flow-bin": "^0.61.0",
-    "style-loader": "^0.19.0",
-    "style-loader": "^0.19.0",
+    "style-loader": "^0.20.1",
+    "style-loader": "^0.20.1",
     "webpack": "^3.0.0"
   },
   "dependencies": {
